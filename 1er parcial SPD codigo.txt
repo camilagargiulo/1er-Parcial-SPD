@@ -1,0 +1,228 @@
+//******************* 1er Parcial SPD ****************************
+Consigna:
+Modelo de montacarga funcional como maqueta para un hospital. El
+objetivo es que implementes un sistema que pueda recibir ordenes de subir, bajar o pausar
+desde diferentes pisos y muestre el estado actual del montacargas en el display 7 segmentos.
+********************************************************************
+//
+#define G 2
+#define F 3
+#define A 4
+#define B 5
+#define C 6
+#define D 7
+#define E 8
+#define botonSube 13
+#define botonBaja 12
+#define botonStop 11
+#define ledVerde 10
+#define ledRojo 9
+
+int subir;
+int bajar;
+int stop;
+int piso=0;
+int orden=1;
+int tiempo=0;
+char comando;
+char comandoNuevo;
+void prende_numero(int numero);
+int calcular_orden();
+char definir_comando(int orden);
+int subir_bajar_piso(char comando);
+
+void setup()
+{
+  pinMode(13, INPUT);
+  pinMode(12, INPUT);
+  pinMode(11, INPUT_PULLUP);
+  for (int i = 2; i < 11; i++)
+  {
+    pinMode(i, OUTPUT);
+  }
+  Serial.begin(9600);
+  Serial.print(piso);
+}
+
+void loop()
+{
+// Enciende led Rojo y piso en el display cuando esta detenido
+
+  prende_numero(piso);
+  digitalWrite(ledRojo, HIGH);
+  digitalWrite(ledVerde, LOW);
+
+// identifica cuando el usuario presiona algun boton 
+
+  orden = calcular_orden();
+  delay(100);
+  if (orden != 1)
+  {
+
+   // decodifica la orden recibida
+
+   comando = definir_comando(orden); 
+
+   // elige el camino a seguir segun el comando(subir, bajar, stop)
+
+   while(comando!= 'n' && piso <10 && piso >-1)
+   {
+     switch(comando)
+     {
+       case 's':
+       	if (piso !=9)
+		{
+          piso ++;
+        } else 
+        { 
+          comando = 'n';
+        }
+       	break;
+       case 'b':
+		if (piso !=0)
+		{
+          piso --;
+        } else 
+        {
+          comando = 'n';
+        }
+        break;
+       case 'e':
+		comando = 'n';
+		break;
+     }
+
+      // Si el comando es subir o bajar enciende el ledVerde y apaga el Rojo     
+
+     if (comando != 'n')
+     {
+       digitalWrite(ledRojo, LOW);
+       digitalWrite(ledVerde, HIGH);
+       orden = 1;
+
+      // Mide el tiempo (para cambiar de piso) y si se recibe una orden nueva 
+	
+       comandoNuevo = comando;
+       while (tiempo < 3000 && comando == comandoNuevo)
+       {
+         delay(100);
+         tiempo += 100;
+         comandoNuevo = definir_comando(calcular_orden());
+       }
+	
+	// Si se cumple el tiempo de 3s cambia de piso en el display
+
+       if (tiempo == 3000)
+       {
+         prende_numero(piso);
+         tiempo = 0;
+       } 
+
+	// Si se interrumpe por una nueva orden la decodifica	
+
+       else
+       {
+       	 comando = definir_comando(orden);
+       }
+	
+	// Muestra por consola el piso en el que se encuentra 
+
+       Serial.println(piso);
+      }
+    } 
+  }
+}
+
+int calcular_orden()
+  /*
+  Lee las entradas digitales de los botones y si la suma da distinta de 1
+  para saber si el usuario envio una nueva orden
+  No recibe parametros
+  Retorna el int orden, que estara en los valores 3, 2, 1 o 0
+  */
+{
+  int subir = digitalRead(botonSube)*2; // para que al tocar orden sea 3
+  int bajar = digitalRead(botonBaja); // para que al tocar orden sea 2
+  int stop = digitalRead(botonStop); // para que al tocar orden sea 0
+  int orden = subir + bajar + stop; // si no hay una accion la suma es 0+0+1
+  return orden;
+}
+
+char definir_comando(int orden)
+  /*
+  A partir de un entero define que comando debe seguir la funcion
+  siendo s (subir) b (bajar) o 'n' (no hacer nada o si esta en funcionamiento detener)
+  Recibe como parametro un entero derivado de la funcion calcular orden
+  Retorna un char, que es el comando que seguira el codigo
+  */
+{
+  switch (orden)
+    {
+      case 3:
+      	comando = 's';
+        break;
+      case 2:
+      	comando = 'b';
+      	break;
+      case 0:
+    	comando = 'n';
+      	break;
+    }
+  return comando;
+}
+      
+void prende_numero(int numero)
+  /*
+  Maneja el display 7 segmentos, encendiendo el numero
+  Recibe como parametro un int que es numero que se desea mostrar en el display
+  No retorna nada
+  */
+{
+  for (int i = 2 ; i < 9; i++)
+  {
+    digitalWrite(i, HIGH);
+  }
+  switch (numero){
+    case 0:
+    	digitalWrite(G, LOW);
+    	break;
+    case 1:
+    	digitalWrite(A, LOW);
+    	digitalWrite(D, LOW);
+    	digitalWrite(E, LOW);
+    	digitalWrite(F, LOW);
+    	digitalWrite(G, LOW);
+    	break;
+    case 2:
+    	digitalWrite(F, LOW);
+    	digitalWrite(C, LOW);
+    	break;
+    case 3:
+    	digitalWrite(F, LOW);
+    	digitalWrite(E, LOW);
+    	break;
+    case 4:
+    	digitalWrite(A, LOW);
+    	digitalWrite(E, LOW);
+    	digitalWrite(D, LOW);
+    	break;
+    case 5:
+    	digitalWrite(B, LOW);
+    	digitalWrite(E, LOW);
+    	break;
+    case 6:
+    	digitalWrite(B, LOW);
+    	break;
+    case 7:
+    	digitalWrite(F, LOW);
+    	digitalWrite(G, LOW);
+    	digitalWrite(E, LOW);
+    	digitalWrite(D, LOW);
+    	break;
+    case 8:
+    	break;
+    case 9:
+    	digitalWrite(E, LOW);
+    	break;
+  }
+}
